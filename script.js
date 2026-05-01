@@ -74,7 +74,9 @@ function saveToStorage() {
 }
 
 function getNextId() {
-  const lastId = Number(localStorage.getItem(COUNTER_KEY) || "0");
+  const rawLastId = Number(localStorage.getItem(COUNTER_KEY));
+  // Keep base as 1 so the first generated ID becomes 2.
+  const lastId = Number.isInteger(rawLastId) && rawLastId >= 1 ? rawLastId : 1;
   const nextId = lastId + 1;
   localStorage.setItem(COUNTER_KEY, String(nextId));
   return nextId;
@@ -133,13 +135,23 @@ function getFilteredAndSortedItems() {
   return list;
 }
 
+function getStockStatus(quantity) {
+  if (quantity <= 5) {
+    return { label: "Low", className: "stock-badge low" };
+  }
+  if (quantity <= 15) {
+    return { label: "Medium", className: "stock-badge medium" };
+  }
+  return { label: "Good", className: "stock-badge high" };
+}
+
 function renderTable() {
   const list = getFilteredAndSortedItems();
 
   if (list.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="7">No records found.</td>
+        <td colspan="8">No records found.</td>
       </tr>
     `;
     updateStats();
@@ -148,11 +160,14 @@ function renderTable() {
 
   tableBody.innerHTML = list
     .map(
-      (item) => `
+      (item) => {
+        const stock = getStockStatus(Number(item.quantity));
+        return `
       <tr>
         <td>${item.id}</td>
         <td>${item.name}</td>
         <td>${item.quantity}</td>
+        <td><span class="${stock.className}">${stock.label}</span></td>
         <td>${Number(item.price).toFixed(2)}</td>
         <td>${Number(item.amount).toFixed(2)}</td>
         <td>${new Date(item.createdAt).toLocaleDateString()}</td>
@@ -161,7 +176,8 @@ function renderTable() {
           <button class="delete-btn" onclick="deleteItem(${item.id})">Delete</button>
         </td>
       </tr>
-    `
+    `;
+      }
     )
     .join("");
 
